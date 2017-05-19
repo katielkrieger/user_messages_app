@@ -6,7 +6,7 @@ import os
 app = Flask(__name__)
 modus = Modus(app)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres://localhost/07-sql-alchemy-2'
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres://localhost/07-sql-alchemy-2'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -135,7 +135,6 @@ def edit_msg(user_id,msg_id):
 # If we are in production, make sure we DO NOT use the debug mode
 if os.environ.get('ENV') == 'production':
     app.config.from_object('config.ProductionConfig')
-    from IPython import embed; embed()
 else:
     app.config.from_object('config.DevelopmentConfig')
 

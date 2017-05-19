@@ -134,9 +134,9 @@ def edit_msg(user_id,msg_id):
 
 # If we are in production, make sure we DO NOT use the debug mode
 if os.environ.get('ENV') == 'production':
-    debug = False
+    app.config.from_object('config.ProductionConfig')
 else:
-    debug = True
+    app.config.from_object('config.DevelopmentConfig')
 
 if __name__ == '__main__':
-    app.run(debug=debug)
+    app.run()

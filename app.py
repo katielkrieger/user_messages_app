@@ -2,7 +2,7 @@ from flask import Flask, render_template, redirect, url_for, request, flash
 from flask_modus import Modus
 from flask_sqlalchemy import SQLAlchemy
 import os
-from forms import newUserForm
+from forms import newUserForm, newMessageForm
 
 app = Flask(__name__)
 modus = Modus(app)
@@ -48,6 +48,10 @@ class Message(db.Model):
     def __repr__(self):
         return self.content
 
+@app.route('/')
+def root():
+    return redirect(url_for('index'))
+
 # --- USER ROUTES ---
 
 @app.route('/users', methods=["GET", "POST"])
@@ -65,7 +69,7 @@ def index():
             return render_template('users/new.html', form=form)
 
     users = User.query.all()
-    return render_template('users/index.html', users=users, form=form)
+    return render_template('users/index.html', users=users)
 
 @app.route('/users/new')
 def new():
@@ -74,6 +78,7 @@ def new():
 
 @app.route('/users/<int:user_id>', methods=["GET","PATCH","DELETE"])
 def show(user_id):
+    # form = newUserForm(request.form)
     found_user = User.query.get_or_404(user_id)
 
     if request.method == b"PATCH":
@@ -95,35 +100,44 @@ def show(user_id):
 
 @app.route('/users/<int:user_id>/edit')
 def edit(user_id):
+    form = newUserForm(request.form)
     found_user = User.query.get_or_404(user_id)
-    return render_template('users/edit.html', user=found_user) # this lets us prepopulate the form fields
+    return render_template('users/edit.html', user=found_user, form=form) # this lets us prepopulate the form fields
 
 # --- MESSAGE ROUTES ---
 
 @app.route('/users/<int:user_id>/messages', methods=["GET","POST"])
 def index_msg(user_id):
+    form = newMessageForm(request.form)
     if request.method == "POST":
-        new_message = Message(request.form['content'],user_id)
-        db.session.add(new_message)
-        db.session.commit()
-        return redirect(url_for('index_msg', user_id=user_id))
+        if form.validate():
+            new_message = Message(request.form['content'],user_id)
+            db.session.add(new_message)
+            db.session.commit()
+            return redirect(url_for('index_msg', user_id=user_id))
+        else:
+            flash("Please review and correct the errors below, and then resubmit.")
+            return render_template('messages/new.html', form=form)
 
     user = User.query.get_or_404(user_id)
     return render_template('messages/index.html', user=user)
 
 @app.route('/users/<int:user_id>/messages/new')
 def new_msg(user_id):
+    form = newMessageForm(request.form)
     user = User.query.get_or_404(user_id)
-    return render_template('messages/new.html', user=user)
+    return render_template('messages/new.html', user=user, form=form)
 
 @app.route('/users/<int:user_id>/messages/<int:msg_id>', methods=["GET", "PATCH", "DELETE"])
 def show_msg(user_id,msg_id):
+    # form = newMessageForm(request.form)
     found_message = Message.query.get_or_404(msg_id)
     found_user = User.query.get_or_404(user_id)
     if request.method == b"PATCH":
-        found_message.msg = request.form['content']
+        found_message.msg = request.form['content'] # this is updating
+        # from IPython import embed; embed()
         db.session.add(found_message)
-        db.session.commit()
+        db.session.commit() # but the database isn't???
         return redirect(url_for('index_msg', user_id=user_id))
 
     if request.method == b"DELETE":
@@ -136,9 +150,10 @@ def show_msg(user_id,msg_id):
 @app.route('/users/<int:user_id>/messages/<int:msg_id>/edit')
 def edit_msg(user_id,msg_id):
     # user = User.query.get_or_404(user_id)
+    form = newMessageForm(request.form)
     found_message = Message.query.get_or_404(msg_id)
     found_user = User.query.get_or_404(user_id)
-    return render_template('messages/edit.html', user=found_user, message=found_message)
+    return render_template('messages/edit.html', user=found_user, message=found_message, form=form)
 
 
 # If we are in production, make sure we DO NOT use the debug mode

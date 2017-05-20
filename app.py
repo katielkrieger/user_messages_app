@@ -1,13 +1,15 @@
-from flask import Flask, render_template, redirect, url_for, request
+from flask import Flask, render_template, redirect, url_for, request, flash
 from flask_modus import Modus
 from flask_sqlalchemy import SQLAlchemy
 import os
+from forms import newUserForm
 
 app = Flask(__name__)
 modus = Modus(app)
 
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres://localhost/07-sql-alchemy-2'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
 db = SQLAlchemy(app)
 
 class User(db.Model):
@@ -50,18 +52,25 @@ class Message(db.Model):
 
 @app.route('/users', methods=["GET", "POST"])
 def index():
+    form = newUserForm(request.form)
     if request.method == "POST":
-        new_user = User(request.form['username'], request.form['email'], request.form['first_name'], request.form['last_name'])
-        db.session.add(new_user)
-        db.session.commit()
-        return redirect(url_for('index'))
+        if form.validate():
+            flash("You've successfully created an account!")
+            new_user = User(request.form['username'], request.form['email'], request.form['first_name'], request.form['last_name'])
+            db.session.add(new_user)
+            db.session.commit()
+            return redirect(url_for('index'))
+        else:
+            flash("Please review and correct the errors below, and then resubmit.")
+            return render_template('users/new.html', form=form)
 
     users = User.query.all()
-    return render_template('users/index.html', users=users)
+    return render_template('users/index.html', users=users, form=form)
 
 @app.route('/users/new')
 def new():
-    return render_template('users/new.html')
+    form = newUserForm(request.form)
+    return render_template('users/new.html', form=form)
 
 @app.route('/users/<int:user_id>', methods=["GET","PATCH","DELETE"])
 def show(user_id):
